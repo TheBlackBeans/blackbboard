@@ -1,12 +1,13 @@
 #!/usr/bin/python3
 
-import sys, pygame, os, argparse, datetime
-from pygame.locals import *
+import sys, os, argparse, datetime
+
+__version__ = "1.0"
 
 parser = argparse.ArgumentParser(
-    prog='Tableau',
+    prog='Board',
     description='''\
-Tableau: wysiwyg interactive board
+Board: WYSIWYG interactive board
 ----------------------------------
 
 Lets you save into session pages the result.\
@@ -21,7 +22,11 @@ parser.add_argument('--height', help='set the height of the window', type=int, d
 parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
 parser.add_argument('--canvas-mul', type=int, help='Real canvas size respect to window size', default=10)
+parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 args = parser.parse_args()
+
+import pygame
+from pygame.locals import *
 
 SCREENSIZE = (args.width,args.height)
 PENWIDTH = args.penwidth
