@@ -85,14 +85,18 @@ offset = (0,0)
 
 page = 0
 
+iscdown = False
+anchor = 0
+anchw = PENWIDTH
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: quit()
         #elif event.type == VIDEORESIZE:
         #    screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
-            isdown = True
-            last = realpos(event.pos)
+            if not iscdown:
+                isdown = True
+                last = realpos(event.pos)
         elif event.type == MOUSEBUTTONDOWN and event.button == 3:
             isrdown = True
             rtopleft = realpos(event.pos)
@@ -122,17 +126,32 @@ while True:
                 d = sub_tuples(pygame.mouse.get_pos(), mo)
                 offset = add_tuples(offset, d)
                 mo = add_tuples(mo, d)
+            if iscdown:
+                d = (pygame.mouse.get_pos()[0] - anchor)//10
+                PENWIDTH = max(anchw+d,1)
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             isdown = False
             last = (None, None)
         elif event.type == KEYDOWN:
             if event.key == ord('s'):
                 save()
+            elif event.key == ord('q'):
+                quit()
+            elif event.key == ord('c'):
+                iscdown = True
+                anchor = pygame.mouse.get_pos()[0]
+                anchw = PENWIDTH
+        elif event.type == KEYUP:
+            if event.key == ord('c'):
+                iscdown = False
+                
     screen.fill(white)
     screen.blit(surface, offset)
     if isrdown:
         x1, y1 = relpos(rtopleft)
         x2, y2 = pygame.mouse.get_pos()
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
-        pygame.draw.lines(screen, grey, True, points, PENWIDTH)
+        pygame.draw.lines(screen, grey, True, points, 4)
+    if iscdown:
+        pygame.draw.circle(screen, grey, pygame.mouse.get_pos(), PENWIDTH)
     pygame.display.flip()
