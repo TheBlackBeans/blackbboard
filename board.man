@@ -1,7 +1,7 @@
-.TH BOARD "1" "April 2020" "Board 1.0" "User Commands"
+.TH BLACKBBOARD "1" "April 2020" "Blackbboard 1.0" "User Commands"
 
 .SH NAME
-Board \- virtual boards
+BlackBBoard \- virtual boards
 
 .SH SYNOPSIS
 \fB./main.py\fR [\-h] [\-p \fIPENWIDTH\fR] [\-s \fISESSION\fR] [\-\-width \fIWIDTH\fR] [\-\-height \fIHEIGHT\fR]
@@ -9,7 +9,7 @@ Board \- virtual boards
 [\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-canvas\-mul \fICANVAS_MUL\fR] [\-v] [\-P \fIPPP\fR]
 
 .SH DESCRIPTION
-\fBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
+\fBBlackBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
 .PP
 Use left click to draw, right click to erase, middle click to scroll.
 .PP
@@ -69,7 +69,7 @@ and the directory to which print the pages (let's say, `mydir')
 .fi
 
 .SH BUGS
-Report bugs at https://github.com/TheBlackBeans/board/issues
+Report bugs at https://github.com/TheBlackBeans/blackbboard/issues
 
 .SH AUTHOR
 Written by BlackBeans (https://github.com/TheBlackBeans).

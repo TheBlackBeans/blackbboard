@@ -1,4 +1,4 @@
-# board(1) - virtual boards
+# BlackBBoard(1) - virtual boards
 
 Version 1.0, April 2020
 
@@ -11,7 +11,7 @@ Version 1.0, April 2020
 
 # Description
 
-**Board** allows you to create virtual boards and to save them as pages within your current session.
+**BlackBBoard** allows you to create virtual boards and to save them as pages within your current session.
 
 Use left click to draw, right click to erase, middle click to scroll.
 
@@ -69,7 +69,7 @@ and the directory to which print the pages (let's say, \`mydir')
 
 # Bugs
 
-Report bugs at https://github.com/TheBlackBeans/board/issues
+Report bugs at https://github.com/TheBlackBeans/blackbboard/issues
 
 
 <a name="author"></a>

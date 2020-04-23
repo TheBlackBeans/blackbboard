@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-# Board -- virtual boards
+# BlackBBoard -- virtual boards
 
 ###############
 ### IMPORTS ###
@@ -24,9 +24,9 @@ __author__ = "BlackBeans"
 ###########################
 
 parser = argparse.ArgumentParser(
-    prog='Board',
+    prog='BlackBBoard',
     description='''\
-Board: WYSIWYG interactive board
+BlackBBoard: WYSIWYG interactive board
 ----------------------------------
 
 Lets you save into session pages the result.\
