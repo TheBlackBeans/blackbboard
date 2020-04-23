@@ -6,7 +6,7 @@
 ### IMPORTS ###
 ###############
 
-import sys, os, argparse, datetime
+import sys, os, argparse, datetime, math
 
 
 
@@ -42,7 +42,7 @@ parser.add_argument('-f', '--format', help='format of output files', default='pn
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
 parser.add_argument('--canvas-mul', type=int, help='real canvas size respect to window size', default=10)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
-parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=50, type=int)
+parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
 args = parser.parse_args()
 
 
@@ -64,6 +64,17 @@ from pygame.locals import *
 SCREENSIZE = (args.width,args.height)
 PPP = args.ppp
 
+# Key aliases
+# ***********
+KEY_SAVE   = 's'
+KEY_QUIT   = 'q'
+KEY_RESIZE = 'w'
+KEY_CUT    = 'x'
+KEY_COPY   = 'c'
+KEY_PASTE  = 'v'
+KEY_DELETE = 'd'
+KEY_FILL   = 'f'
+
 # Save info
 # ********
 SESSION = datetime.datetime.now().strftime(args.session)
@@ -75,6 +86,7 @@ DIR = args.dir
 white = 255,255,255
 grey = 127,127,127
 black = 0,0,0
+transparent = 0,0,0,0
 
 penwidth = args.penwidth
 
@@ -113,7 +125,50 @@ def save():
     global page
     page += 1
     pygame.image.save(screen, os.path.join(DIR, ("%s-%s.%s" % (SESSION, page, FORMAT))))
+    popup('saved page %s' % page)
 
+# Better drawing functions
+# ************************
+def make_rect(pos1,pos2):
+    x1, y1 = pos1
+    x2, y2 = pos2
+    left = min(x1,x2)
+    w = max(x1,x2) - left
+    top = min(y1,y2)
+    h = max(y1,y2) - top
+    return pygame.Rect(left, top, w, h)
+def draw_line(surface, pos1, pos2, color, width):
+    pygame.gfxdraw.filled_circle(surface,*pos1,math.ceil(width/2),color)
+    pygame.gfxdraw.filled_circle(surface,*pos2,math.ceil(width/2),color)
+    pygame.draw.line(surface,color,pos1,pos2,width)
+def delete(surface, pos1, pos2):
+    erase(surface, pos1, pos2)
+    popup('deleted')
+def erase(surface, pos1, pos2):
+    pygame.draw.rect(surface, transparent, make_rect(pos1,pos2))
+def copy(surface, pos1, pos2):
+    global buffer
+    buffer = surface.copy().subsurface(make_rect(pos1,pos2))
+    popup('copied')
+def cut(surface, pos1, pos2):
+    copy(surface, pos1, pos2)
+    erase(surface, pos1, pos2)
+    popup('cuted')
+def paste(surface, pos1):
+    global buffer
+    if buffer == None:
+        return
+    surface.blit(buffer, pos1)
+    popup('pasted')
+def fill(surface, pos1, pos2):
+    pygame.draw.rect(surface, black, make_rect(pos1,pos2))
+    popup('filled')
+def popup(message):
+    text = font.render(message, True, black)
+    print(message)
+    popup_surface.fill(white)
+    pygame.draw.rect(popup_surface, grey, pygame.Rect(0,0,popup_surface.get_width(),popup_surface.get_height()),3)
+    popup_surface.blit(text, (2,2))
 
 
 #############
@@ -130,12 +185,19 @@ if not os.path.isdir(DIR):
 pygame.init()
 pygame.mixer.quit()
 
+fontsize = 24
+font = pygame.font.Font(None, fontsize)
+
 screen = pygame.display.set_mode(SCREENSIZE)
 
-pygame.display.set_caption('Tableau')
+pygame.display.set_caption('BlackBBoard - %s' % SESSION)
 
-surface = pygame.Surface(mul_tuple(args.canvas_mul, SCREENSIZE))
-surface.fill(white)
+surface = pygame.Surface(mul_tuple(args.canvas_mul, SCREENSIZE), SRCALPHA)
+surface.fill(transparent)
+
+popup_surface = pygame.Surface((screen.get_width(), fontsize))
+popup_surface.fill(white)
+popup_pos = 0,0
 
 pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
@@ -145,6 +207,8 @@ pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 ## INPUT VARS ##
 ################
 
+# also known as buffer for computing input
+
 islock = False
 isdown = False
 anchor = (None,None)
@@ -153,13 +217,19 @@ lock = None
 #  - 'm1':  draw
 #  - 'm3':  erase
 #  - 'm2':  move
-#  - 'c' :  change pen width
+#  - 'w' :  change pen width
+#  - 'x' :  cut
+#  - 'c' :  copy
+#  - 'f' :  fill
 #  - None:  nothing
+# lock represents the actual state of the pen
 offset = (0,0)
 
 coff = 0
 maxcoff = 0
 anchw = penwidth
+
+buffer = None
 
 page = 0
 
@@ -168,6 +238,8 @@ page = 0
 ###############
 ## MAIN LOOP ##
 ###############
+
+popup('Current session: %s' % SESSION)
 
 while True:
     for event in pygame.event.get():
@@ -180,19 +252,21 @@ while True:
                 islock = False
                 lock = None
             elif lock == 'm3':
-                x1, y1 = anchor
-                x2, y2 = realpos(event.pos)
-                left = min(x1,x2)
-                w = max(x1,x2) - left
-                top = min(y1,y2)
-                h = max(y1,y2) - top
-                pygame.draw.rect(surface, white, pygame.Rect(left, top, w, h))
+                delete(surface, anchor, realpos(event.pos))
             elif lock == 'm2':
                 pass
-            elif lock == 'c':
+            elif lock == KEY_RESIZE:
                 anchw = penwidth
                 pygame.mouse.set_pos(anchor)
                 pygame.mouse.set_visible(True)
+            elif lock == KEY_CUT:
+                cut(surface, anchor, realpos(event.pos))
+            elif lock == KEY_COPY:
+                copy(surface, anchor, realpos(event.pos))
+            elif lock == KEY_DELETE:
+                delete(surface, anchor, realpos(event.pos))
+            elif lock == KEY_FILL:
+                fill(surface, anchor, realpos(event.pos))
             anchor = (None,None)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
             isdown = True
@@ -200,7 +274,7 @@ while True:
             if not islock:
                 islock = True
                 lock = 'm1'
-            elif lock == 'c':
+            elif lock == KEY_RESIZE:
                 pygame.mouse.set_visible(False)
                 anchw = penwidth
                 coff = 0
@@ -231,28 +305,46 @@ while True:
                     last = realpos(event.pos)
                 else:
                     last = anchor
-                pygame.draw.line(surface,black,last,realpos(event.pos),penwidth)
                 anchor = realpos(event.pos)
+                draw_line(surface, last, anchor, black, penwidth)
             elif lock == 'm2' and isdown:
                 d = sub_tuples(realpos(pygame.mouse.get_pos()), anchor)
                 offset = add_tuples(offset, d)
                 mo = add_tuples(anchor, d)
-            elif lock == 'c' and isdown:
+            elif lock == KEY_RESIZE and isdown:
                 coff = realpos(pygame.mouse.get_pos())[0] - anchor[0]
                 coff = max(coff,maxcoff)
                 penwidth = max(anchw+coff//PPP,1)
         elif event.type == KEYDOWN:
-            if event.key == ord('s'):
+            if event.key == ord(KEY_SAVE):
                 save()
-            elif event.key == ord('q'):
+            elif event.key == ord(KEY_QUIT):
                 quit()
-            elif event.key == ord('c'):
+            elif event.key == ord(KEY_RESIZE):
                 if not islock:
                     islock = True
-                    lock = 'c'
+                    lock = KEY_RESIZE
+            elif event.key == ord(KEY_CUT):
+                if not islock:
+                    islock = True
+                    lock = KEY_CUT
+            elif event.key == ord(KEY_COPY):
+                if not islock:
+                    islock = True
+                    lock = KEY_COPY
+            elif event.key == ord(KEY_PASTE):
+                paste(surface, realpos(pygame.mouse.get_pos()))
+            elif event.key == ord(KEY_DELETE):
+                if not islock:
+                    islock = True
+                    lock = KEY_DELETE
+            elif event.key == ord(KEY_FILL):
+                if not islock:
+                    islock = True
+                    lock =KEY_FILL
         elif event.type == KEYUP:
-            if event.key == ord('c'):
-                if lock == 'c':
+            if event.key == ord(KEY_RESIZE):
+                if lock == KEY_RESIZE:
                     islock = False
                     lock = None
                     if anchor != (None,None):
@@ -260,14 +352,42 @@ while True:
                         pygame.mouse.set_pos(anchor)
                         pygame.mouse.set_visible(True)
                         anchor = (None,None)
-                
+            elif event.key == ord(KEY_CUT):
+                if lock == KEY_CUT:
+                    islock = False
+                    lock = None
+                    if anchor != (None,None):
+                        cut(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        anchor = (None, None)
+            elif event.key == ord(KEY_COPY):
+                if lock == KEY_COPY:
+                    islock = False
+                    lock = None
+                    if anchor != (None,None):
+                        copy(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        anchor = (None,None)
+            elif event.key == ord(KEY_DELETE):
+                if lock == KEY_DELETE:
+                    islock = False
+                    lock = None
+                    if anchor != (None,None):
+                        delete(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        anchor = (None,None)
+            elif event.key == ord(KEY_FILL):
+                if lock == KEY_FILL:
+                    islock = False
+                    lock = None
+                    if anchor != (None,None):
+                        fill(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        anchor = (None,None)
     screen.fill(white)
     screen.blit(surface, offset)
-    if lock == 'm3' and isdown:
+    screen.blit(popup_surface, popup_pos)
+    if lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
         x1, y1 = relpos(anchor)
         x2, y2 = pygame.mouse.get_pos()
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
         pygame.draw.aalines(screen, grey, True, points, 4)
-    if lock == 'c' and isdown:
+    if lock in {KEY_RESIZE} and isdown:
         pygame.draw.circle(screen, grey, relpos(anchor), (penwidth+1)>>1)
     pygame.display.flip()
