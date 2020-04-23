@@ -40,8 +40,9 @@ parser.add_argument('--width', help='set the width of the window', type=int, def
 parser.add_argument('--height', help='set the height of the window', type=int, default=1024)
 parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
-parser.add_argument('--canvas-mul', type=int, help='Real canvas size respect to window size', default=10)
+parser.add_argument('--canvas-mul', type=int, help='real canvas size respect to window size', default=10)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
+parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=50, type=int)
 args = parser.parse_args()
 
 
@@ -61,6 +62,7 @@ from pygame.locals import *
 ###############
 
 SCREENSIZE = (args.width,args.height)
+PPP = args.ppp
 
 # Save info
 # ********
@@ -135,7 +137,7 @@ pygame.display.set_caption('Tableau')
 surface = pygame.Surface(mul_tuple(args.canvas_mul, SCREENSIZE))
 surface.fill(white)
 
-pygame.mouse.set_cursor(*pygame.cursors.tri_right)
+pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
 
 
@@ -154,6 +156,9 @@ lock = None
 #  - 'c' :  change pen width
 #  - None:  nothing
 offset = (0,0)
+
+coff = 0
+maxcoff = 0
 anchw = penwidth
 
 page = 0
@@ -186,6 +191,8 @@ while True:
                 pass
             elif lock == 'c':
                 anchw = penwidth
+                pygame.mouse.set_pos(anchor)
+                pygame.mouse.set_visible(True)
             anchor = (None,None)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
             isdown = True
@@ -194,7 +201,10 @@ while True:
                 islock = True
                 lock = 'm1'
             elif lock == 'c':
+                pygame.mouse.set_visible(False)
                 anchw = penwidth
+                coff = 0
+                maxcoff = -(anchw-1)*PPP
         elif event.type == MOUSEBUTTONDOWN and event.button == 3:
             if not islock:
                 islock = True
@@ -228,8 +238,9 @@ while True:
                 offset = add_tuples(offset, d)
                 mo = add_tuples(anchor, d)
             elif lock == 'c' and isdown:
-                d = (realpos(pygame.mouse.get_pos())[0] - anchor[0])//10
-                penwidth = max(anchw+d,1)
+                coff = realpos(pygame.mouse.get_pos())[0] - anchor[0]
+                coff = max(coff,maxcoff)
+                penwidth = max(anchw+coff//PPP,1)
         elif event.type == KEYDOWN:
             if event.key == ord('s'):
                 save()
@@ -244,6 +255,11 @@ while True:
                 if lock == 'c':
                     islock = False
                     lock = None
+                    if anchor != (None,None):
+                        anchw = penwidth
+                        pygame.mouse.set_pos(anchor)
+                        pygame.mouse.set_visible(True)
+                        anchor = (None,None)
                 
     screen.fill(white)
     screen.blit(surface, offset)
@@ -253,5 +269,5 @@ while True:
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
         pygame.draw.aalines(screen, grey, True, points, 4)
     if lock == 'c' and isdown:
-        pygame.draw.circle(screen, grey, pygame.mouse.get_pos(), penwidth)
+        pygame.draw.circle(screen, grey, relpos(anchor), (penwidth+1)>>1)
     pygame.display.flip()
