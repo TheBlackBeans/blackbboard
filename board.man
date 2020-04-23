@@ -1,49 +1,69 @@
 .TH BOARD "1" "April 2020" "Board 1.0" "User Commands"
 
 .SH NAME
-Board \- manual page for Board 1.0
+Board \- virtual boards
 
 .SH SYNOPSIS
-\fB./main.py\fR [\-h] [\-p PENWIDTH] [\-s SESSION] [\-\-width WIDTH] [\-\-height HEIGHT]
+\fB./main.py\fR [\-h] [\-p \fIPENWIDTH\fR] [\-s \fISESSION\fR] [\-\-width \fIWIDTH\fR] [\-\-height \fIHEIGHT\fR]
 .IP
-[\-f {jpeg,bmp,tga,png}] [\-d DIR] [\-\-canvas\-mul CANVAS_MUL] [\-v]
+[\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-canvas\-mul \fICANVAS_MUL\fR] [\-v]
 
 .SH DESCRIPTION
-Board allows you to create virtual boards and to save them as pages within your current session.
+\fBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
 .PP
 Use left click to draw, right click to erase, middle click to scroll.
 .PP
 Use [s] to save a page (what you currently see).
 .PP
-Your pages will be at \fBdir\fR/\fBsession\fR\-\fBpage\fR.\fBformat\fR, where \fBpage\fR is an integer representing the n-th page saved in the current session.
+Your pages will be at \fIdir\fR/\fIsession\fR\-\fIpage\fR.\fIformat\fR, where \fIpage\fR is an integer representing the n-th page saved in the current session.
+
+.SH OPTIONS
 .SS "optional arguments:"
 .TP
 \fB\-h\fR, \fB\-\-help\fR
 show this help message and exit
 .TP
-\fB\-p\fR PENWIDTH, \fB\-\-penwidth\fR PENWIDTH
+\fB\-p\fR \fIPENWIDTH\fR, \fB\-\-penwidth\fR \fIPENWIDTH\fR
 width of the pen
 .TP
-\fB\-s\fR SESSION, \fB\-\-session\fR SESSION
+\fB\-s\fR \fISESSION\fR, \fB\-\-session\fR \fISESSION\fR
 session name
 .TP
-\fB\-\-width\fR WIDTH
+\fB\-\-width\fR \fIWIDTH\fR
 set the width of the window
 .TP
-\fB\-\-height\fR HEIGHT
+\fB\-\-height\fR \fIHEIGHT\fR
 set the height of the window
 .TP
 \fB\-f\fR {jpeg,bmp,tga,png}, \fB\-\-format\fR {jpeg,bmp,tga,png}
 format of output files
 .TP
-\fB\-d\fR DIR, \fB\-\-dir\fR DIR
+\fB\-d\fR \fIDIR\fR, \fB\-\-dir\fR \fIDIR\fR
 target directory to save session pages
 .TP
-\fB\-\-canvas\-mul\fR CANVAS_MUL
+\fB\-\-canvas\-mul\fR \fICANVAS_MUL\fR
 Real canvas size respect to window size
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 show program's version number and exit
+
+.SH EXAMPLES
+Most simple usage of this out-of-the-box utilitary
+.PP
+.nf
+.RS
+ ./main.py
+.RE
+.fi
+.PP
+Specify the name of the session you want to work on (let's say, `session1',
+and the directory to which print the pages (let's say, `mydir')
+.PP
+.nf
+.RS
+ ./main.py -s session1 -d mydir
+.RE
+.fi
 
 .SH BUGS
 Report bugs at https://github.com/TheBlackBeans/board/issues
