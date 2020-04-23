@@ -3,7 +3,7 @@
 Version 1.0, April 2020
 
 ```
-./main.py [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--canvas-mul CANVAS_MUL] [-v]
+./main.py [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--canvas-mul CANVAS_MUL] [-v] [-P PPP]
 ```
 
 
@@ -45,10 +45,11 @@ Your pages will be at _dir_/_session_-_page_._format_, where _page_ is an intege
 * **-d** _DIR_, **--dir** _DIR_  
   target directory to save session pages
 * **--canvas-mul** _CANVAS\_MUL_  
-  Real canvas size respect to window size
+  real canvas size respect to window size
 * **-v**, **--version**  
   show program's version number and exit
-  
+* **-P** _PPP_, **--ppp** _PPP_
+  inverse speed of scale of penwidth
 
 <a name="examples"></a>
 

@@ -6,7 +6,7 @@ Board \- virtual boards
 .SH SYNOPSIS
 \fB./main.py\fR [\-h] [\-p \fIPENWIDTH\fR] [\-s \fISESSION\fR] [\-\-width \fIWIDTH\fR] [\-\-height \fIHEIGHT\fR]
 .IP
-[\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-canvas\-mul \fICANVAS_MUL\fR] [\-v]
+[\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-canvas\-mul \fICANVAS_MUL\fR] [\-v] [\-P \fIPPP\fR]
 
 .SH DESCRIPTION
 \fBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
@@ -42,10 +42,13 @@ format of output files
 target directory to save session pages
 .TP
 \fB\-\-canvas\-mul\fR \fICANVAS_MUL\fR
-Real canvas size respect to window size
+real canvas size respect to window size
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 show program's version number and exit
+.TP
+\fB\-P\fR \fIPPP\fR, \fB\-\-ppp\fR \fIPPP\fR
+inverse speed of scale of pen width
 
 .SH EXAMPLES
 Most simple usage of this out-of-the-box utilitary
