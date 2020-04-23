@@ -165,7 +165,6 @@ def fill(surface, pos1, pos2):
     popup('filled')
 def popup(message):
     text = font.render(message, True, black)
-    print(message)
     popup_surface.fill(white)
     pygame.draw.rect(popup_surface, grey, pygame.Rect(0,0,popup_surface.get_width(),popup_surface.get_height()),3)
     popup_surface.blit(text, (2,2))
