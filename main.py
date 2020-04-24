@@ -190,6 +190,9 @@ font = pygame.font.Font(None, fontsize)
 screen = pygame.display.set_mode(SCREENSIZE)
 
 pygame.display.set_caption('BlackBBoard - %s' % SESSION)
+icon = pygame.image.load('blackbboard.png')
+pygame.display.set_icon(icon)
+print('Icon made by Good Ware from flaticon.com')
 
 surface = pygame.Surface(mul_tuple(args.canvas_mul, SCREENSIZE), SRCALPHA)
 surface.fill(transparent)
