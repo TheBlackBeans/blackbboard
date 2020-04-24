@@ -148,7 +148,7 @@ def erase(surface, pos1, pos2):
     pygame.draw.rect(surface, transparent, make_rect(pos1,pos2))
 def copy(surface, pos1, pos2):
     global buffer
-    buffer = surface.copy().subsurface(make_rect(pos1,pos2))
+    buffer = surface.subsurface(make_rect(pos1,pos2)).copy()
     popup('copied')
 def cut(surface, pos1, pos2):
     copy(surface, pos1, pos2)
