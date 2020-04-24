@@ -75,6 +75,20 @@ KEY_PASTE  = 'v'
 KEY_DELETE = 'd'
 KEY_FILL   = 'f'
 
+# Tool names
+# *********
+tool_map = {
+    KEY_RESIZE: 'resize',
+    KEY_CUT:    'cut',
+    KEY_COPY:   'copy',
+    KEY_DELETE: 'delete',
+    KEY_FILL:   'fill',
+    'm3':       'delete',
+    'm2':       'move',
+    'm1':       'pen',
+    None:       'pen'
+}
+
 # Save info
 # ********
 SESSION = datetime.datetime.now().strftime(args.session)
@@ -86,11 +100,46 @@ DIR = args.dir
 white = 255,255,255
 grey = 127,127,127
 black = 0,0,0
+blue = 0,0,255
+cyan = 127,127,255
+red = 255,0,0
+green = 0,255,0
 transparent = 0,0,0,0
 
+colors = {black,blue,cyan,red,green}
+
 penwidth = args.penwidth
+pencolor = black
 
 
+
+#################
+#### CLASSES ####
+#################
+
+class Lock:
+    def __init__(self):
+        self._lock = None
+        self.lock = None
+    @property
+    def lock(self):
+        return self._lock
+    @lock.setter
+    def lock(self, value):
+        self._lock = value
+        chtool(tool_map[value])
+
+class Hitbox:
+    def __init__(self, pos1,pos2):
+        x1,y1 = pos1
+        x2,y2 = pos2
+        self.x1,self.x2 = min(x1,x2), max(x1,x2)
+        self.y1,self.y2 = min(y1,y2), max(y1,y2)
+    def __contains__(self, pos):
+        x,y=pos
+        return self.x1 <= x <= self.x2 and self.y1 <= y <= self.y2
+        
+        
 
 #################
 ### FUNCTIONS ###
@@ -160,15 +209,19 @@ def paste(surface, pos1):
         return
     surface.blit(buffer, pos1)
     popup('pasted')
-def fill(surface, pos1, pos2):
-    pygame.draw.rect(surface, black, make_rect(pos1,pos2))
+def fill(surface, pos1, pos2, color):
+    pygame.draw.rect(surface, color, make_rect(pos1,pos2))
     popup('filled')
 def popup(message):
     text = font.render(message, True, black)
     popup_surface.fill(white)
     pygame.draw.rect(popup_surface, grey, pygame.Rect(0,0,popup_surface.get_width(),popup_surface.get_height()),3)
     popup_surface.blit(text, (2,2))
-
+def chtool(tool):
+    text = font.render('Tool: %s' % tool, True, black)
+    tool_surface.fill(white)
+    pygame.draw.rect(tool_surface, grey, pygame.Rect(0,fontsize,tool_surface.get_width(),tool_surface.get_height()),3)
+    tool_surface.blit(text, (2,2))
 
 #############
 ### SETUP ###
@@ -201,6 +254,20 @@ popup_surface = pygame.Surface((screen.get_width(), fontsize))
 popup_surface.fill(white)
 popup_pos = 0,0
 
+tool_surface = pygame.Surface((screen.get_width()//2, fontsize))
+tool_surface.fill(white)
+tool_pos = 0,fontsize
+
+color_surface = pygame.Surface((screen.get_width()//2,fontsize))
+color_surface.fill(white)
+color_pos = screen.get_width()//2,fontsize
+color_hitbox = Hitbox(color_pos, add_tuples(color_pos, (color_surface.get_width(), color_surface.get_height())))
+
+for i, color in enumerate(colors):
+    pos = color_surface.get_height()*(i+1)+color_surface.get_height()//2,color_surface.get_height()//2
+    radius = color_surface.get_height()//2
+    pygame.gfxdraw.filled_circle(color_surface, *pos, radius, color)
+
 pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 
 
@@ -214,7 +281,7 @@ pygame.mouse.set_cursor(*pygame.cursors.tri_left)
 islock = False
 isdown = False
 anchor = (None,None)
-lock = None
+lock = Lock()
 # lock may be either:
 #  - 'm1':  draw
 #  - 'm3':  erase
@@ -245,38 +312,41 @@ popup('Current session: %s' % SESSION)
 
 while True:
     for event in pygame.event.get():
+        pos = realpos(pygame.mouse.get_pos())
         if event.type == pygame.QUIT: quit()
         #elif event.type == VIDEORESIZE:
         #    screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             isdown = False
-            if lock == 'm1':
+            if lock.lock == 'm1':
                 islock = False
-                lock = None
-            elif lock == 'm3':
-                delete(surface, anchor, realpos(event.pos))
-            elif lock == 'm2':
+                lock.lock = None
+            elif lock.lock == 'm3':
+                delete(surface, anchor, pos)
+            elif lock.lock == 'm2':
                 pass
-            elif lock == KEY_RESIZE:
+            elif lock.lock == KEY_RESIZE:
                 anchw = penwidth
                 pygame.mouse.set_pos(anchor)
                 pygame.mouse.set_visible(True)
-            elif lock == KEY_CUT:
-                cut(surface, anchor, realpos(event.pos))
-            elif lock == KEY_COPY:
-                copy(surface, anchor, realpos(event.pos))
-            elif lock == KEY_DELETE:
-                delete(surface, anchor, realpos(event.pos))
-            elif lock == KEY_FILL:
-                fill(surface, anchor, realpos(event.pos))
+            elif lock.lock == KEY_CUT:
+                cut(surface, anchor, pos)
+            elif lock.lock == KEY_COPY:
+                copy(surface, anchor, pos)
+            elif lock.lock == KEY_DELETE:
+                delete(surface, anchor, pos)
+            elif lock.lock == KEY_FILL:
+                fill(surface, anchor, pos, pencolor)
             anchor = (None,None)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
             isdown = True
-            anchor = realpos(event.pos)
+            anchor = pos
             if not islock:
+                if relpos(pos) in color_hitbox:
+                      pencolor = screen.get_at(relpos(pos))
                 islock = True
-                lock = 'm1'
-            elif lock == KEY_RESIZE:
+                lock.lock = 'm1'
+            elif lock.lock == KEY_RESIZE:
                 pygame.mouse.set_visible(False)
                 anchw = penwidth
                 coff = 0
@@ -284,37 +354,37 @@ while True:
         elif event.type == MOUSEBUTTONDOWN and event.button == 3:
             if not islock:
                 islock = True
-                lock = 'm3'
+                lock.lock = 'm3'
         elif event.type == MOUSEBUTTONDOWN and event.button == 2:
             if not islock:
                 islock = True
-                lock = 'm2'
+                lock.lock = 'm2'
         elif event.type == MOUSEBUTTONUP and event.button == 3:
-            if lock == 'm3':
+            if lock.lock == 'm3':
                 islock = False
-                lock = None
+                lock.lock = None
         elif event.type == MOUSEBUTTONUP and event.button == 2:
-            if lock == 'm2':
+            if lock.lock == 'm2':
                 islock = False
-                lock = None
+                lock.lock = None
         elif event.type == MOUSEMOTION:
             if not islock:
                 pass
             if not isdown:
                 pass
-            if lock == 'm1' and isdown:
+            if lock.lock == 'm1' and isdown:
                 if anchor == (None,None):
-                    last = realpos(event.pos)
+                    last = pos
                 else:
                     last = anchor
-                anchor = realpos(event.pos)
-                draw_line(surface, last, anchor, black, penwidth)
-            elif lock == 'm2' and isdown:
-                d = sub_tuples(realpos(pygame.mouse.get_pos()), anchor)
+                anchor = pos
+                draw_line(surface, last, anchor, pencolor, penwidth)
+            elif lock.lock == 'm2' and isdown:
+                d = sub_tuples(pos, anchor)
                 offset = add_tuples(offset, d)
                 mo = add_tuples(anchor, d)
-            elif lock == KEY_RESIZE and isdown:
-                coff = realpos(pygame.mouse.get_pos())[0] - anchor[0]
+            elif lock.lock == KEY_RESIZE and isdown:
+                coff = pos[0] - anchor[0]
                 coff = max(coff,maxcoff)
                 penwidth = max(anchw+coff//PPP,1)
         elif event.type == KEYDOWN:
@@ -325,71 +395,73 @@ while True:
             elif event.key == ord(KEY_RESIZE):
                 if not islock:
                     islock = True
-                    lock = KEY_RESIZE
+                    lock.lock = KEY_RESIZE
             elif event.key == ord(KEY_CUT):
                 if not islock:
                     islock = True
-                    lock = KEY_CUT
+                    lock.lock = KEY_CUT
             elif event.key == ord(KEY_COPY):
                 if not islock:
                     islock = True
-                    lock = KEY_COPY
+                    lock.lock = KEY_COPY
             elif event.key == ord(KEY_PASTE):
-                paste(surface, realpos(pygame.mouse.get_pos()))
+                paste(surface, pos)
             elif event.key == ord(KEY_DELETE):
                 if not islock:
                     islock = True
-                    lock = KEY_DELETE
+                    lock.lock = KEY_DELETE
             elif event.key == ord(KEY_FILL):
                 if not islock:
                     islock = True
-                    lock =KEY_FILL
+                    lock.lock =KEY_FILL
         elif event.type == KEYUP:
             if event.key == ord(KEY_RESIZE):
-                if lock == KEY_RESIZE:
+                if lock.lock == KEY_RESIZE:
                     islock = False
-                    lock = None
+                    lock.lock = None
                     if anchor != (None,None):
                         anchw = penwidth
                         pygame.mouse.set_pos(anchor)
                         pygame.mouse.set_visible(True)
                         anchor = (None,None)
             elif event.key == ord(KEY_CUT):
-                if lock == KEY_CUT:
+                if lock.lock == KEY_CUT:
                     islock = False
-                    lock = None
+                    lock.lock = None
                     if anchor != (None,None):
-                        cut(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        cut(surface, anchor, pos)
                         anchor = (None, None)
             elif event.key == ord(KEY_COPY):
-                if lock == KEY_COPY:
+                if lock.lock == KEY_COPY:
                     islock = False
-                    lock = None
+                    lock.lock = None
                     if anchor != (None,None):
-                        copy(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        copy(surface, anchor, pos)
                         anchor = (None,None)
             elif event.key == ord(KEY_DELETE):
-                if lock == KEY_DELETE:
+                if lock.lock == KEY_DELETE:
                     islock = False
-                    lock = None
+                    lock.lock = None
                     if anchor != (None,None):
-                        delete(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        delete(surface, anchor, pos)
                         anchor = (None,None)
             elif event.key == ord(KEY_FILL):
-                if lock == KEY_FILL:
+                if lock.lock == KEY_FILL:
                     islock = False
-                    lock = None
+                    lock.lock = None
                     if anchor != (None,None):
-                        fill(surface, anchor, realpos(pygame.mouse.get_pos()))
+                        fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
     screen.fill(white)
     screen.blit(surface, offset)
     screen.blit(popup_surface, popup_pos)
-    if lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
+    screen.blit(tool_surface, tool_pos)
+    screen.blit(color_surface, color_pos)
+    if lock.lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
         x1, y1 = relpos(anchor)
         x2, y2 = pygame.mouse.get_pos()
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
         pygame.draw.aalines(screen, grey, True, points, 4)
-    if lock in {KEY_RESIZE} and isdown:
+    if lock.lock in {KEY_RESIZE} and isdown:
         pygame.draw.circle(screen, grey, relpos(anchor), (penwidth+1)>>1)
     pygame.display.flip()
