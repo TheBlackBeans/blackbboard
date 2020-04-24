@@ -63,6 +63,7 @@ from pygame.locals import *
 
 SCREENSIZE = (args.width,args.height)
 PPP = args.ppp
+BASEDIR = os.path.dirname(os.path.abspath(__file__))
 
 # Key aliases
 # ***********
@@ -104,9 +105,12 @@ blue = 0,0,255
 cyan = 127,127,255
 red = 255,0,0
 green = 0,255,0
+maroon = 128,0,0
+pink = 255,105,180
+yellow = 250,218,94
 transparent = 0,0,0,0
 
-colors = {black,blue,cyan,red,green}
+colors = [black,red,green,blue,cyan,maroon,pink,yellow]
 
 penwidth = args.penwidth
 pencolor = black
@@ -243,7 +247,7 @@ font = pygame.font.Font(None, fontsize)
 screen = pygame.display.set_mode(SCREENSIZE)
 
 pygame.display.set_caption('BlackBBoard - %s' % SESSION)
-icon = pygame.image.load('blackbboard.png')
+icon = pygame.image.load(os.path.join(BASEDIR, 'blackbboard.png'))
 pygame.display.set_icon(icon)
 print('Icon made by Good Ware from flaticon.com')
 
@@ -260,7 +264,7 @@ tool_pos = 0,fontsize
 
 color_surface = pygame.Surface((screen.get_width()//2,fontsize))
 color_surface.fill(white)
-color_pos = screen.get_width()//2,fontsize
+color_pos = screen.get_width()//2+2,fontsize
 color_hitbox = Hitbox(color_pos, add_tuples(color_pos, (color_surface.get_width(), color_surface.get_height())))
 
 for i, color in enumerate(colors):
@@ -339,11 +343,12 @@ while True:
                 fill(surface, anchor, pos, pencolor)
             anchor = (None,None)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
-            isdown = True
-            anchor = pos
             if not islock:
                 if relpos(pos) in color_hitbox:
-                      pencolor = screen.get_at(relpos(pos))
+                    ncolor = screen.get_at(relpos(pos))
+                    if ncolor != white:
+                        pencolor = ncolor
+                        continue
                 islock = True
                 lock.lock = 'm1'
             elif lock.lock == KEY_RESIZE:
@@ -351,6 +356,8 @@ while True:
                 anchw = penwidth
                 coff = 0
                 maxcoff = -(anchw-1)*PPP
+            isdown = True
+            anchor = pos
         elif event.type == MOUSEBUTTONDOWN and event.button == 3:
             if not islock:
                 islock = True
