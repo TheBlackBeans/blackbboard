@@ -1,6 +1,9 @@
-.PHONY: install
+.PHONY: install update
 
-install:
+update:
+	-git pull
+
+install: update
 	-mkdir ~/blackbboard
 	-cp -rf * ~/blackbboard/
 	-mv ~/blackbboard/main.py ~/blackbboard/blackbboard
