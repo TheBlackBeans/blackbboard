@@ -3,5 +3,6 @@
 install:
 	-mkdir ~/blackbboard
 	-cp -rf * ~/blackbboard/
-	echo '~/blackbboard/main.py $*' >|~/bin/blackbboard
+	-mv ~/blackbboard/main.py ~/blackbboard/blackbboard
+	echo '~/blackbboard/blackbboard $*' >|~/bin/blackbboard
 	chmod +x ~/bin/blackbboard
