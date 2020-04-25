@@ -336,8 +336,8 @@ def flush():
 
 # Session dir
 # ***********
-if not os.path.isdir(DIR):
-    os.makedirs(DIR)
+if not os.path.isdir(os.path.join(DIR,SESSION)):
+    os.makedirs(os.path.join(DIR,SESSION))
 
 # Pygame
 # ******
