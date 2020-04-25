@@ -175,9 +175,13 @@ def relpos(pos):
 
 # Save to page
 # ************
+def pre_render():
+    screen.fill(white)
+    screen.blit(surface, offset)    
 def save():
     global page
     page += 1
+    pre_render()
     pygame.image.save(screen, os.path.join(DIR, ("%s-%s.%s" % (SESSION, page, FORMAT))))
     popup('saved page %s' % page)
 
@@ -460,8 +464,7 @@ while True:
                     if anchor != (None,None):
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
-    screen.fill(white)
-    screen.blit(surface, offset)
+    pre_render()
     screen.blit(popup_surface, popup_pos)
     screen.blit(tool_surface, tool_pos)
     screen.blit(color_surface, color_pos)
