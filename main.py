@@ -272,7 +272,7 @@ def cut(surface, pos1, pos2):
     copy(surface, pos1, pos2)
     erase(surface, pos1, pos2)
     popup('cuted')
-    return False
+    return True
 @drawing
 def paste(surface, pos1):
     global buffer
@@ -302,7 +302,7 @@ def flush():
         return
     surface.blit(temp_surf, mul_tuple(-1,offset))
     temp_surf.fill(transparent)
-    need_flush = True
+    need_flush = False
 
 #############
 ### SETUP ###
@@ -470,6 +470,7 @@ while True:
                 anchor = pos
                 draw_line(surface, last, anchor, pencolor, penwidth)
             elif lock.lock == 'm2' and isdown:
+                flush()
                 d = sub_tuples(pos, anchor)
                 offset = add_tuples(offset, d)
                 anchor = pos
