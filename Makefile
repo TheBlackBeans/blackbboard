@@ -1,5 +1,7 @@
 .PHONY: all install update dependencies pull setup
 
+SHELL := /bin/bash
+
 DIR = $(HOME)/blackbboard
 SHORTDIR = $(HOME)/bin
 SHORTCUT = $(HOME)/bin/blackbboard
@@ -45,6 +47,9 @@ ifeq ($(wildcard $(SHORTDIR)),)
 	@echo "WARNING: IF THE SHORTCUT DOES NOT WORK, COSIDER ADDING $(SHORTDIR) TO YOUR PATH"
 	@mkdir $(SHORTDIR)
 endif
+	[[ ":$(PATH)" == *":$(HOME)/bin:"* ]] || echo 'PATH=$$PATH:$$HOME/bin' >> $(HOME)/.bashrc
+	. .bashrc
+
 
 $(SHORTCUT):
 ifeq ("$(wildcard $(SHORTCUT))", "")
