@@ -107,10 +107,11 @@ red = 255,0,0
 green = 0,255,0
 maroon = 128,0,0
 pink = 255,105,180
-yellow = 250,218,94
+yellow = 255,255,0
+orange = 235,120,0
 transparent = 0,0,0,0
 
-colors = [black,red,green,blue,cyan,maroon,pink,yellow]
+colors = [black,red,green,blue,cyan,maroon,pink,yellow,orange]
 
 penwidth = args.penwidth
 pencolor = black
@@ -191,8 +192,8 @@ def make_rect(pos1,pos2):
     h = max(y1,y2) - top
     return pygame.Rect(left, top, w, h)
 def draw_line(surface, pos1, pos2, color, width):
-    pygame.gfxdraw.filled_circle(surface,*pos1,math.ceil(width/2),color)
-    pygame.gfxdraw.filled_circle(surface,*pos2,math.ceil(width/2),color)
+    pygame.gfxdraw.filled_circle(surface,*pos1,width//2,color)
+    pygame.gfxdraw.filled_circle(surface,*pos2,width//2,color)
     pygame.draw.line(surface,color,pos1,pos2,width)
 def delete(surface, pos1, pos2):
     erase(surface, pos1, pos2)
@@ -224,7 +225,7 @@ def popup(message):
 def chtool(tool):
     text = font.render('Tool: %s' % tool, True, black)
     tool_surface.fill(white)
-    pygame.draw.rect(tool_surface, grey, pygame.Rect(0,fontsize,tool_surface.get_width(),tool_surface.get_height()),3)
+    pygame.draw.rect(tool_surface, grey, pygame.Rect(0,0,tool_surface.get_width(),tool_surface.get_height()),3)
     tool_surface.blit(text, (2,2))
 
 #############
@@ -470,5 +471,5 @@ while True:
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
         pygame.draw.aalines(screen, grey, True, points, 4)
     if lock.lock in {KEY_RESIZE} and isdown:
-        pygame.draw.circle(screen, grey, relpos(anchor), (penwidth+1)>>1)
+        pygame.draw.circle(screen, grey, relpos(anchor), (penwidth)>>1)
     pygame.display.flip()
