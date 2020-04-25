@@ -3,7 +3,7 @@
 Version 1.0, April 2020
 
 ```
-./main.py [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--chunk-size CHUNK_SIZE] [-v] [-P PPP]
+blackbboard [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--chunk-size CHUNK_SIZE] [-v] [-P PPP] [-F FPS]
 ```
 
 
@@ -50,6 +50,8 @@ Your pages will be at _dir_/_session_-_page_._format_, where _page_ is an intege
   show program's version number and exit
 * **-P** _PPP_, **--ppp** _PPP_
   inverse speed of scale of penwidth
+* **-F** _FPS_, **--fps** _FPS_
+  set maximum fps (higher values improve drawing at cost of more ressources)
 
 <a name="examples"></a>
 

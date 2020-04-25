@@ -43,6 +43,7 @@ parser.add_argument('-d', '--dir', help='target directory to save session pages'
 parser.add_argument('--chunk-size', type=int, help='size of each chunk', default=2000)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
+parser.add_argument('-F', '--fps', help='set maximum fps (higher values improve drawing at cost of more ressources)', default=60, type=int)
 args = parser.parse_args()
 
 
@@ -61,6 +62,7 @@ from pygame.locals import *
 ## CONSTANTS ##
 ###############
 
+FPS = args.fps
 SCREENSIZE = (args.width,args.height)
 PPP = args.ppp
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
@@ -396,6 +398,8 @@ page = 0
 
 popup('Current session: %s' % SESSION)
 
+clock = pygame.time.Clock()
+
 while True:
     for event in pygame.event.get():
         pos = pygame.mouse.get_pos()
@@ -556,3 +560,4 @@ while True:
     if lock.lock in {KEY_RESIZE} and isdown:
         pygame.draw.circle(screen, grey, anchor, (penwidth)>>1)
     pygame.display.flip()
+    clock.tick(FPS)
