@@ -6,7 +6,7 @@ BlackBBoard \- virtual boards
 .SH SYNOPSIS
 \fB./main.py\fR [\-h] [\-p \fIPENWIDTH\fR] [\-s \fISESSION\fR] [\-\-width \fIWIDTH\fR] [\-\-height \fIHEIGHT\fR]
 .IP
-[\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-canvas\-mul \fICANVAS_MUL\fR] [\-v] [\-P \fIPPP\fR]
+[\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-chunk-size \fICHUNK_SIZE\fR] [\-v] [\-P \fIPPP\fR]
 
 .SH DESCRIPTION
 \fBBlackBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
@@ -41,8 +41,8 @@ format of output files
 \fB\-d\fR \fIDIR\fR, \fB\-\-dir\fR \fIDIR\fR
 target directory to save session pages
 .TP
-\fB\-\-canvas\-mul\fR \fICANVAS_MUL\fR
-real canvas size respect to window size
+\fB\-\-chunk\-size\fR \fICHUNK_SIZE\fR
+size of each chunk
 .TP
 \fB\-v\fR, \fB\-\-version\fR
 show program's version number and exit
@@ -55,7 +55,7 @@ Most simple usage of this out-of-the-box utilitary
 .PP
 .nf
 .RS
- ./main.py
+ blackbboard
 .RE
 .fi
 .PP
@@ -64,7 +64,7 @@ and the directory to which print the pages (let's say, `mydir')
 .PP
 .nf
 .RS
- ./main.py -s session1 -d mydir
+ blackbboard -s session1 -d mydir
 .RE
 .fi
 

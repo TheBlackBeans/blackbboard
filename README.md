@@ -3,7 +3,7 @@
 Version 1.0, April 2020
 
 ```
-./main.py [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--canvas-mul CANVAS_MUL] [-v] [-P PPP]
+./main.py [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--chunk-size CHUNK_SIZE] [-v] [-P PPP]
 ```
 
 
@@ -44,8 +44,8 @@ Your pages will be at _dir_/_session_-_page_._format_, where _page_ is an intege
   format of output files
 * **-d** _DIR_, **--dir** _DIR_  
   target directory to save session pages
-* **--canvas-mul** _CANVAS\_MUL_  
-  real canvas size respect to window size
+* **--chunk-size** _CHUNK\_SIZE_  
+  size of each chunk
 * **-v**, **--version**  
   show program's version number and exit
 * **-P** _PPP_, **--ppp** _PPP_
@@ -57,12 +57,12 @@ Your pages will be at _dir_/_session_-_page_._format_, where _page_ is an intege
 
 Most simple usage of this out-of-the-box utilitary
 
-     ./main.py
+     blackbboard
 
 Specify the name of the session you want to work on (let's say, \`session1',
 and the directory to which print the pages (let's say, \`mydir')
 
-     ./main.py -s session1 -d mydir
+     blackbboard -s session1 -d mydir
 
 
 <a name="bugs"></a>

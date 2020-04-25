@@ -40,7 +40,7 @@ parser.add_argument('--width', help='set the width of the window', type=int, def
 parser.add_argument('--height', help='set the height of the window', type=int, default=1024)
 parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
-parser.add_argument('--canvas-mul', type=int, help='real canvas size respect to window size', default=2)
+parser.add_argument('--chunk-size', type=int, help='size of each chunk', default=2000)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
 args = parser.parse_args()
@@ -123,9 +123,12 @@ pencolor = black
 #################
 
 class Surface:
-    def __init__(self, chunksize):
+    def __init__(self, chunksize, chunks=None):
         self.chunksize = chunksize
-        self.chunks = {}
+        if chunks == None:
+            self.chunks = {}
+        else:
+            self.chunks = chunks
     def get_chunk(self, pos):
         if pos not in self.chunks:
             self.create_chunk(pos)
@@ -155,7 +158,8 @@ class Surface:
         for (x,y), chunk in self.retrieve_chunks(pos):
             rpos = add_tuples((x,y),pos)
             chunk.blit(surface,rpos)
-            
+    def save(self):
+        return (chunksize)
 
 class Lock:
     def __init__(self):
@@ -318,7 +322,7 @@ icon = pygame.image.load(os.path.join(BASEDIR, 'blackbboard.png'))
 pygame.display.set_icon(icon)
 print('Icon made by Good Ware from flaticon.com')
 
-surface = Surface(args.canvas_mul*max(SCREENSIZE))
+surface = Surface(args.chunk_size)
 
 popup_surface = pygame.Surface((screen.get_width(), fontsize))
 popup_surface.fill(white)
