@@ -6,7 +6,7 @@
 ### IMPORTS ###
 ###############
 
-import sys, os, argparse, datetime, math
+import sys, os, argparse, datetime, math, functools
 
 
 
@@ -40,7 +40,7 @@ parser.add_argument('--width', help='set the width of the window', type=int, def
 parser.add_argument('--height', help='set the height of the window', type=int, default=1024)
 parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
-parser.add_argument('--canvas-mul', type=int, help='real canvas size respect to window size', default=10)
+parser.add_argument('--canvas-mul', type=int, help='real canvas size respect to window size', default=2)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
 args = parser.parse_args()
@@ -122,6 +122,41 @@ pencolor = black
 #### CLASSES ####
 #################
 
+class Surface:
+    def __init__(self, chunksize):
+        self.chunksize = chunksize
+        self.chunks = {}
+    def get_chunk(self, pos):
+        if pos not in self.chunks:
+            self.create_chunk(pos)
+        return self.chunks[pos]
+    def create_chunk(self, pos):
+        self.chunks[pos] = pygame.Surface((self.chunksize,self.chunksize), SRCALPHA)
+        self.chunks[pos].fill(transparent)
+    def retrieve_chunks(self,pos):
+        # Yields chunks that you can possibly see in `surface'
+        #  if surface.topleft == pos
+        #     and chunksize >= surface.height
+        #     and chunksize >= surface.width
+        # yields (pos,chunk) where pos == chunk.topleft
+        # yields at most four chunks
+        x,y=pos
+        xs = {x//self.chunksize}
+        ys = {y//self.chunksize}
+        if x%self.chunksize != 0:
+            xs.add(x//self.chunksize+1)
+        if y%self.chunksize != 0:
+            ys.add(y//self.chunksize+1)
+        for x in xs:
+            for y in ys:
+                yield (x*self.chunksize,y*self.chunksize), self.get_chunk((x,y))
+    def blit(self, surface, pos):
+        print('Blit at %s' % str(pos))
+        for (x,y), chunk in self.retrieve_chunks(pos):
+            rpos = add_tuples((x,y),pos)
+            chunk.blit(surface,rpos)
+            
+
 class Lock:
     def __init__(self):
         self._lock = None
@@ -177,7 +212,9 @@ def relpos(pos):
 # ************
 def pre_render():
     screen.fill(white)
-    screen.blit(surface, offset)    
+    for pos, chunk in surface.retrieve_chunks(offset):
+        screen.blit(chunk, offset)
+    screen.blit(temp_surf,(0,0))
 def save():
     global page
     page += 1
@@ -187,6 +224,13 @@ def save():
 
 # Better drawing functions
 # ************************
+def drawing(function):
+    @functools.wraps(function)
+    def wrapper(surface, *args, **kwargs):
+        global need_flush
+        need_flush |= function(temp_surf, *args, **kwargs)
+    return wrapper
+
 def make_rect(pos1,pos2):
     x1, y1 = pos1
     x2, y2 = pos2
@@ -195,15 +239,22 @@ def make_rect(pos1,pos2):
     top = min(y1,y2)
     h = max(y1,y2) - top
     return pygame.Rect(left, top, w, h)
+@drawing
 def draw_line(surface, pos1, pos2, color, width):
+    pos1=pos1
+    pos2=pos2
     pygame.gfxdraw.filled_circle(surface,*pos1,width//2,color)
     pygame.gfxdraw.filled_circle(surface,*pos2,width//2,color)
-    pygame.draw.line(surface,color,pos1,pos2,width)
+    pygame.draw.line(surface,color,pos1,pos2,width+1)
+    return True
 def delete(surface, pos1, pos2):
     erase(surface, pos1, pos2)
     popup('deleted')
+    return True
+@drawing
 def erase(surface, pos1, pos2):
     pygame.draw.rect(surface, transparent, make_rect(pos1,pos2))
+    return True
 def copy(surface, pos1, pos2):
     global buffer
     buffer = surface.subsurface(make_rect(pos1,pos2)).copy()
@@ -212,15 +263,19 @@ def cut(surface, pos1, pos2):
     copy(surface, pos1, pos2)
     erase(surface, pos1, pos2)
     popup('cuted')
+@drawing
 def paste(surface, pos1):
     global buffer
     if buffer == None:
-        return
+        return False
     surface.blit(buffer, pos1)
     popup('pasted')
+    return True
+@drawing
 def fill(surface, pos1, pos2, color):
     pygame.draw.rect(surface, color, make_rect(pos1,pos2))
     popup('filled')
+    return True
 def popup(message):
     text = font.render(message, True, black)
     popup_surface.fill(white)
@@ -231,6 +286,13 @@ def chtool(tool):
     tool_surface.fill(white)
     pygame.draw.rect(tool_surface, grey, pygame.Rect(0,0,tool_surface.get_width(),tool_surface.get_height()),3)
     tool_surface.blit(text, (2,2))
+def flush():
+    global need_flush
+    if need_flush == False:
+        return
+    surface.blit(temp_surf, mul_tuple(-1,offset))
+    temp_surf.fill(transparent)
+    need_flush = True
 
 #############
 ### SETUP ###
@@ -256,8 +318,7 @@ icon = pygame.image.load(os.path.join(BASEDIR, 'blackbboard.png'))
 pygame.display.set_icon(icon)
 print('Icon made by Good Ware from flaticon.com')
 
-surface = pygame.Surface(mul_tuple(args.canvas_mul, SCREENSIZE), SRCALPHA)
-surface.fill(transparent)
+surface = Surface(args.canvas_mul*max(SCREENSIZE))
 
 popup_surface = pygame.Surface((screen.get_width(), fontsize))
 popup_surface.fill(white)
@@ -308,6 +369,11 @@ maxcoff = 0
 anchw = penwidth
 
 buffer = None
+# the clipboard for cut/copy/paste tools
+
+temp_surf = pygame.Surface(SCREENSIZE, SRCALPHA)
+temp_surf.fill(transparent)
+need_flush = False
 
 page = 0
 
@@ -321,12 +387,13 @@ popup('Current session: %s' % SESSION)
 
 while True:
     for event in pygame.event.get():
-        pos = realpos(pygame.mouse.get_pos())
+        pos = pygame.mouse.get_pos()
         if event.type == pygame.QUIT: quit()
         #elif event.type == VIDEORESIZE:
         #    screen = pygame.display.set_mode((event.w, event.h), RESIZABLE)
         elif event.type == MOUSEBUTTONUP and event.button == 1:
             isdown = False
+            flush()
             if lock.lock == 'm1':
                 islock = False
                 lock.lock = None
@@ -349,8 +416,8 @@ while True:
             anchor = (None,None)
         elif event.type == MOUSEBUTTONDOWN and event.button == 1:
             if not islock:
-                if relpos(pos) in color_hitbox:
-                    ncolor = screen.get_at(relpos(pos))
+                if pos in color_hitbox:
+                    ncolor = screen.get_at(pos)
                     if ncolor != white:
                         pencolor = ncolor
                         continue
@@ -394,7 +461,7 @@ while True:
             elif lock.lock == 'm2' and isdown:
                 d = sub_tuples(pos, anchor)
                 offset = add_tuples(offset, d)
-                mo = add_tuples(anchor, d)
+                anchor = pos
             elif lock.lock == KEY_RESIZE and isdown:
                 coff = pos[0] - anchor[0]
                 coff = max(coff,maxcoff)
@@ -465,14 +532,15 @@ while True:
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
     pre_render()
+    popup(' '.join(str(e) for e in surface.chunks.keys()))
     screen.blit(popup_surface, popup_pos)
     screen.blit(tool_surface, tool_pos)
     screen.blit(color_surface, color_pos)
     if lock.lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
-        x1, y1 = relpos(anchor)
+        x1, y1 = anchor
         x2, y2 = pygame.mouse.get_pos()
         points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
         pygame.draw.aalines(screen, grey, True, points, 4)
     if lock.lock in {KEY_RESIZE} and isdown:
-        pygame.draw.circle(screen, grey, relpos(anchor), (penwidth)>>1)
+        pygame.draw.circle(screen, grey, anchor, (penwidth)>>1)
     pygame.display.flip()
