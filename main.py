@@ -39,7 +39,7 @@ parser.add_argument('-s', '--session', help='session name', default='%Y-%m-%d-%H
 parser.add_argument('--width', help='set the width of the window', type=int, default=1280)
 parser.add_argument('--height', help='set the height of the window', type=int, default=1024)
 parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
-parser.add_argument('-d', '--dir', help='target directory to save session pages', default='session')
+parser.add_argument('-d', '--dir', help='target directory to save session pages', default='blackbboard')
 parser.add_argument('--chunk-size', type=int, help='size of each chunk', default=2000)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
@@ -166,7 +166,7 @@ class Surface:
         last = {}
         for (x,y), chunk in self.retrieve_chunks(pos):
             rpos = add_tuples((x,y),pos)
-            last[pos] = chunk.copy()
+            last[x,y] = chunk.copy()
             chunk.blit(surface,rpos)
         self.lasts.append(last)
     def save(self):
@@ -244,7 +244,7 @@ def save():
     global page
     page += 1
     full_render()
-    pygame.image.save(screen, os.path.join(DIR, ("%s-%s.%s" % (SESSION, page, FORMAT))))
+    pygame.image.save(screen, os.path.join(DIR, SESSION, ("%s-%s.%s" % (SESSION, page, FORMAT))))
     popup('saved page %s' % page)
 
 # Better drawing functions
