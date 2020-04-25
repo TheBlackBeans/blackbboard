@@ -77,6 +77,7 @@ KEY_COPY   = 'c'
 KEY_PASTE  = 'v'
 KEY_DELETE = 'd'
 KEY_FILL   = 'f'
+KEY_UNDO   = 'z'
 
 # Tool names
 # *********
@@ -131,10 +132,16 @@ class Surface:
             self.chunks = {}
         else:
             self.chunks = chunks
+        self.lasts = []
     def get_chunk(self, pos):
         if pos not in self.chunks:
             self.create_chunk(pos)
         return self.chunks[pos]
+    def undo(self):
+        if len(self.lasts) == 0:
+            return
+        current = self.lasts.pop()
+        self.chunks.update(current)
     def create_chunk(self, pos):
         self.chunks[pos] = pygame.Surface((self.chunksize,self.chunksize), SRCALPHA)
         self.chunks[pos].fill(transparent)
@@ -156,9 +163,12 @@ class Surface:
             for y in ys:
                 yield (x*self.chunksize,y*self.chunksize), self.get_chunk((x,y))
     def blit(self, surface, pos):
+        last = {}
         for (x,y), chunk in self.retrieve_chunks(pos):
             rpos = add_tuples((x,y),pos)
+            last[pos] = chunk.copy()
             chunk.blit(surface,rpos)
+        self.lasts.append(last)
     def save(self):
         return (chunksize)
 
@@ -190,6 +200,11 @@ class Hitbox:
 ### FUNCTIONS ###
 #################
 
+def undo():
+    flush()
+    surface.undo()
+    popup('undo')
+    
 # Quit
 # ****
 def quit(exitcode=0):
@@ -220,9 +235,11 @@ def pre_render():
     for pos, chunk in surface.retrieve_chunks(offset):
         screen.blit(chunk, offset)
     screen.blit(temp_surf,(0,0))
+    
 def full_render():
     pre_render()
     flush()
+    
 def save():
     global page
     page += 1
@@ -232,12 +249,19 @@ def save():
 
 # Better drawing functions
 # ************************
-def drawing(function):
-    @functools.wraps(function)
-    def wrapper(surface, *args, **kwargs):
-        global need_flush
-        need_flush |= function(temp_surf, *args, **kwargs)
-    return wrapper
+def drawing(commit=True):
+    def decorator(function):
+        @functools.wraps(function)
+        def wrapper(surface, *args, **kwargs):
+            global need_flush
+            n = function(temp_surf, *args, **kwargs)
+            if commit and n:
+                need_flush = True
+                flush()
+            else:
+                need_flush |= n
+        return wrapper
+    return decorator
 
 def make_rect(pos1,pos2):
     x1, y1 = pos1
@@ -247,7 +271,7 @@ def make_rect(pos1,pos2):
     top = min(y1,y2)
     h = max(y1,y2) - top
     return pygame.Rect(left, top, w, h)
-@drawing
+@drawing(False)
 def draw_line(surface, pos1, pos2, color, width):
     pos1=pos1
     pos2=pos2
@@ -259,7 +283,7 @@ def delete(surface, pos1, pos2):
     erase(surface, pos1, pos2)
     popup('deleted')
     return True
-@drawing
+@drawing()
 def erase(surface, pos1, pos2):
     pygame.draw.rect(surface, white, make_rect(pos1,pos2))
     return True
@@ -269,13 +293,13 @@ def copy(surface, pos1, pos2):
     buffer = screen.subsurface(make_rect(pos1,pos2)).copy()
     buffer.set_colorkey(white)
     popup('copied')
-@drawing
+@drawing()
 def cut(surface, pos1, pos2):
     copy(surface, pos1, pos2)
     erase(surface, pos1, pos2)
     popup('cuted')
     return True
-@drawing
+@drawing()
 def paste(surface, pos1):
     global buffer
     if buffer == None:
@@ -283,7 +307,7 @@ def paste(surface, pos1):
     surface.blit(buffer, pos1)
     popup('pasted')
     return True
-@drawing
+@drawing()
 def fill(surface, pos1, pos2, color):
     pygame.draw.rect(surface, color, make_rect(pos1,pos2))
     popup('filled')
@@ -509,6 +533,8 @@ while True:
                 if not islock:
                     islock = True
                     lock.lock =KEY_FILL
+            elif event.key == ord(KEY_UNDO):
+                undo()
         elif event.type == KEYUP:
             if event.key == ord(KEY_RESIZE):
                 if lock.lock == KEY_RESIZE:
@@ -548,7 +574,6 @@ while True:
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
     pre_render()
-    popup(' '.join(str(e) for e in surface.chunks.keys()))
     screen.blit(popup_surface, popup_pos)
     screen.blit(tool_surface, tool_pos)
     screen.blit(color_surface, color_pos)
