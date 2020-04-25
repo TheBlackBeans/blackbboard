@@ -33,23 +33,27 @@ endif
 pull:
 	git pull
 
-setup: $(DIR) $(SHORTDIR) $(SHORTCUT)
-	@echo 'SETUP'
-	@echo 'Setting up environment...'
+$(DIR):
+ifeq ("$(wildcard $(DIR))", "")
+	@echo 'Creating the envrironment...'
+	mkdir $(DIR)
+endif
+
+$(SHORTDIR):
 ifeq ($(wildcard $(SHORTDIR)),)
 	@echo 'Creating shortcut directory...'
 	@echo "WARNING: IF THE SHORTCUT DOES NOT WORK, COSIDER ADDING $(SHORTDIR) TO YOUR PATH"
 	@mkdir $(SHORTDIR)
 endif
+
+$(SHORTCUT):
 ifeq ("$(wildcard $(SHORTCUT))", "")
 	@echo 'Creating the shortcut...'
-	@echo '~/blackbboard/blackbboard $*' >|$(SHORTCUT)
-endif
-ifeq ("$(wildcard $(DIR))", "")
-	@echo 'Creating the envrironment...'
-	mkdir $(DIR)
+	@echo '~/blackbboard/blackbboard $$*' >|$(SHORTCUT)
 endif
 	chmod +x $(SHORTCUT)
+
+setup: $(DIR) $(SHORTDIR) $(SHORTCUT)
 	@echo 'Setup done!'
 
 install: $(shell find * -type f) setup
