@@ -154,7 +154,6 @@ class Surface:
             for y in ys:
                 yield (x*self.chunksize,y*self.chunksize), self.get_chunk((x,y))
     def blit(self, surface, pos):
-        print('Blit at %s' % str(pos))
         for (x,y), chunk in self.retrieve_chunks(pos):
             rpos = add_tuples((x,y),pos)
             chunk.blit(surface,rpos)
@@ -219,10 +218,13 @@ def pre_render():
     for pos, chunk in surface.retrieve_chunks(offset):
         screen.blit(chunk, offset)
     screen.blit(temp_surf,(0,0))
+def full_render():
+    pre_render()
+    flush()
 def save():
     global page
     page += 1
-    pre_render()
+    full_render()
     pygame.image.save(screen, os.path.join(DIR, ("%s-%s.%s" % (SESSION, page, FORMAT))))
     popup('saved page %s' % page)
 
@@ -257,16 +259,20 @@ def delete(surface, pos1, pos2):
     return True
 @drawing
 def erase(surface, pos1, pos2):
-    pygame.draw.rect(surface, transparent, make_rect(pos1,pos2))
+    pygame.draw.rect(surface, white, make_rect(pos1,pos2))
     return True
 def copy(surface, pos1, pos2):
     global buffer
-    buffer = surface.subsurface(make_rect(pos1,pos2)).copy()
+    full_render()
+    buffer = screen.subsurface(make_rect(pos1,pos2)).copy()
+    buffer.set_colorkey(white)
     popup('copied')
+@drawing
 def cut(surface, pos1, pos2):
     copy(surface, pos1, pos2)
     erase(surface, pos1, pos2)
     popup('cuted')
+    return False
 @drawing
 def paste(surface, pos1):
     global buffer
@@ -377,6 +383,7 @@ buffer = None
 
 temp_surf = pygame.Surface(SCREENSIZE, SRCALPHA)
 temp_surf.fill(transparent)
+temp_surf.set_colorkey(white)
 need_flush = False
 
 page = 0
