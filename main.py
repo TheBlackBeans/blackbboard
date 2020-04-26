@@ -6,7 +6,7 @@
 ### IMPORTS ###
 ###############
 
-import sys, os, argparse, datetime, math, functools
+import sys, os, argparse, datetime, math, functools, tarfile, io
 
 
 
@@ -66,6 +66,16 @@ FPS = args.fps
 SCREENSIZE = (args.width,args.height)
 PPP = args.ppp
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
+MAXUNDO = 5
+
+# Cursession
+# **********
+CSFILE = '.cursession'
+CSIMGFORMAT = 'RGBA'
+CSARCHWMODE = 'w:gz'
+CSARCHRMODE = 'r:gz'
+CSCHUNKMASK = '{x}.{y}.chunk'
+CSPERSISTANCE = False
 
 # Key aliases
 # ***********
@@ -78,6 +88,7 @@ KEY_PASTE  = 'v'
 KEY_DELETE = 'd'
 KEY_FILL   = 'f'
 KEY_UNDO   = 'z'
+KEY_SAVECS = 'a'
 
 # Tool names
 # *********
@@ -165,12 +176,14 @@ class Surface:
     def blit(self, surface, pos):
         last = {}
         for (x,y), chunk in self.retrieve_chunks(pos):
-            rpos = add_tuples((x,y),pos)
+            rpos = sub_tuples((x,y),pos)
             last[x,y] = chunk.copy()
             chunk.blit(surface,rpos)
         self.lasts.append(last)
+        if len(self.lasts) > MAXUNDO:
+            self.lasts.pop(0)
     def save(self):
-        return (chunksize)
+        return (self.chunksize, self.chunks)
 
 class Lock:
     def __init__(self):
@@ -204,10 +217,42 @@ def undo():
     flush()
     surface.undo()
     popup('undo')
+
+# Session handling
+# ****************
+def add_file_archive(archive, name, string):
+    s = io.BytesIO(string)
+    tar_info = tarfile.TarInfo(name=name)
+    tar_info.size = len(string)
+    archive.addfile(tarinfo=tar_info, fileobj=s)
+
+def save_cursession():
+    flush()
+    cs, chunks = surface.save()
+    with tarfile.open(os.path.join(DIR, SESSION, CSFILE), CSARCHWMODE) as archive:
+        add_file_archive(archive, 'chunksize', bytes(str(cs), 'utf-8'))
+        for (x,y), chunk in chunks.items():
+            add_file_archive(archive, CSCHUNKMASK.format(x=x,y=y), pygame.image.tostring(chunk, CSIMGFORMAT))
+    popup('saved current session')
+def load_cursession():
+    if os.path.isfile(os.path.join(DIR, SESSION, CSFILE)) and tarfile.is_tarfile(os.path.join(DIR, SESSION, CSFILE)):
+        with tarfile.open(os.path.join(DIR,SESSION,CSFILE), CSARCHRMODE) as archive:
+            files = archive.getnames()
+            files.remove('chunksize')
+            cs = int(archive.extractfile('chunksize').read())
+            chunks = {}
+            for file in files:
+                chunk = pygame.image.fromstring(archive.extractfile(file).read(), (cs,cs), CSIMGFORMAT)
+                coords = tuple(int(e) for e in file.split('.')[:2])
+                chunks[coords] = chunk
+        return cs, chunks
+    else:
+        return (args.chunk_size, {})
     
 # Quit
 # ****
 def quit(exitcode=0):
+    if CSPERSISTANCE: save_cursession()
     pygame.quit()
     sys.exit(exitcode)
 
@@ -232,8 +277,11 @@ def relpos(pos):
 # ************
 def pre_render():
     screen.fill(white)
+    result = []
     for pos, chunk in surface.retrieve_chunks(offset):
-        screen.blit(chunk, offset)
+        result.append(str(pos))
+        screen.blit(chunk, sub_tuples(offset,pos))
+    popup('Rendering chunks: ' + ', '.join(result))
     screen.blit(temp_surf,(0,0))
     
 def full_render():
@@ -242,9 +290,9 @@ def full_render():
     
 def save():
     global page
-    page += 1
     full_render()
     pygame.image.save(screen, os.path.join(DIR, SESSION, ("%s-%s.%s" % (SESSION, page, FORMAT))))
+    page += 1
     popup('saved page %s' % page)
 
 # Better drawing functions
@@ -326,7 +374,7 @@ def flush():
     global need_flush
     if need_flush == False:
         return
-    surface.blit(temp_surf, mul_tuple(-1,offset))
+    surface.blit(temp_surf, mul_tuple(1,offset))
     temp_surf.fill(transparent)
     need_flush = False
 
@@ -354,7 +402,7 @@ icon = pygame.image.load(os.path.join(BASEDIR, 'blackbboard.png'))
 pygame.display.set_icon(icon)
 print('Icon made by Good Ware from flaticon.com')
 
-surface = Surface(args.chunk_size)
+surface = Surface(*load_cursession())
 
 popup_surface = pygame.Surface((screen.get_width(), fontsize))
 popup_surface.fill(white)
@@ -412,8 +460,9 @@ temp_surf.fill(transparent)
 temp_surf.set_colorkey(white)
 need_flush = False
 
-page = 0
-
+page = 1
+while os.path.isfile(os.path.join(DIR, SESSION, ("%s-%s.%s" % (SESSION, page, FORMAT)))):
+    page += 1
 
 
 ###############
