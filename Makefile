@@ -2,9 +2,10 @@
 
 SHELL := /bin/bash
 
-DIR = $(HOME)/blackbboard
+DIR = $(HOME)/.blackbboard
 SHORTDIR = $(HOME)/bin
 SHORTCUT = $(HOME)/bin/blackbboard
+SHORTCUTUP = $(HOME)/bin/bbb-update
 
 all: dependencies update
 
@@ -54,19 +55,28 @@ endif
 $(SHORTCUT):
 ifeq ("$(wildcard $(SHORTCUT))", "")
 	@echo 'Creating the shortcut...'
-	@echo '~/blackbboard/blackbboard $$*' >|$(SHORTCUT)
+	@echo '$(DIR)/blackbboard $$*' >|$(SHORTCUT)
 endif
 	chmod +x $(SHORTCUT)
 
-setup: $(DIR) $(SHORTDIR) $(SHORTCUT)
+$(SHORTCUTUP):
+ifeq ("$(wildcard $(SHORTCUTUP))", "")
+	@echo 'Creating the shortcut for update...'
+	@echo 'cd $(DIR);make update' >|$(SHORTCUTUP)
+endif
+	chmod +x $(SHORTCUTUP)
+
+
+setup: $(DIR) $(SHORTDIR) $(SHORTCUT) $(SHORTCUTUP)
 	@echo 'Setup done!'
 
 install: $(shell find * -type f) setup
 	@echo 'INSTALL'
 	@echo 'Copying to environment...'
-	-cp -rf * ~/blackbboard/
+	-cp -rf * $(DIR)/
+	-cp -rf .git $(DIR)/.git
 	@echo 'Bounding to shortcut...'
-	-mv ~/blackbboard/main.py ~/blackbboard/blackbboard
+	-mv $(DIR)/main.py $(DIR)/blackbboard
 	@echo 'Install done!'
 
 update: pull install
