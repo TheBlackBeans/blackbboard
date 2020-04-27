@@ -74,7 +74,7 @@ install: $(shell find * -type f) setup
 	@echo 'INSTALL'
 	@echo 'Copying to environment...'
 	-cp -rf * $(DIR)/
-	-cp -rf .git $(DIR)/.git
+	-cp -rf .git $(DIR)/
 	@echo 'Bounding to shortcut...'
 	-mv $(DIR)/main.py $(DIR)/blackbboard
 	@echo 'Install done!'
