@@ -320,8 +320,8 @@ def save():
     global page
     full_render()
     pygame.image.save(screen, os.path.join(DIR, SESSION, ("%s-%s.%s" % (SESSION, page, FORMAT))))
-    page += 1
     popup('saved page %s' % page)
+    page += 1
 
 # Better drawing functions
 # ************************
