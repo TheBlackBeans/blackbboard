@@ -70,7 +70,7 @@ MAXUNDO = 5
 
 # Cursession
 # **********
-CSFILE = '.cursession'
+CSFILE = 'cursession'
 CSIMGFORMAT = 'RGBA'
 CSARCHWMODE = 'w:gz'
 CSARCHRMODE = 'r:gz'
@@ -229,25 +229,40 @@ def add_file_archive(archive, name, string):
 def save_cursession():
     flush()
     cs, chunks = surface.save()
-    with tarfile.open(os.path.join(DIR, SESSION, CSFILE), CSARCHWMODE) as archive:
+    with tarfile.open(os.path.join(BASEDIR, SESSION, CSFILE), CSARCHWMODE) as archive:
         add_file_archive(archive, 'chunksize', bytes(str(cs), 'utf-8'))
+        add_file_archive(archive, 'offset', bytes(str(offset), 'utf-8'))
         for (x,y), chunk in chunks.items():
             add_file_archive(archive, CSCHUNKMASK.format(x=x,y=y), pygame.image.tostring(chunk, CSIMGFORMAT))
     popup('saved current session')
+
+def read_var(var, files, archive, default=None):
+    if var not in files and default!=None:
+        return default
+    elif var not in files:
+        raise FileNotFoundError("Couldn't find the variable file %s" % var)
+    files.remove(var)
+    return eval(archive.extractfile(var).read())
+    
 def load_cursession():
-    if os.path.isfile(os.path.join(DIR, SESSION, CSFILE)) and tarfile.is_tarfile(os.path.join(DIR, SESSION, CSFILE)):
-        with tarfile.open(os.path.join(DIR,SESSION,CSFILE), CSARCHRMODE) as archive:
-            files = archive.getnames()
-            files.remove('chunksize')
-            cs = int(archive.extractfile('chunksize').read())
-            chunks = {}
-            for file in files:
-                chunk = pygame.image.fromstring(archive.extractfile(file).read(), (cs,cs), CSIMGFORMAT)
-                coords = tuple(int(e) for e in file.split('.')[:2])
-                chunks[coords] = chunk
-        return cs, chunks
-    else:
-        return (args.chunk_size, {})
+    try:
+        if os.path.isfile(os.path.join(BASEDIR, SESSION, CSFILE)) and tarfile.is_tarfile(os.path.join(BASEDIR, SESSION, CSFILE)):
+            print(os.path.join(BASEDIR,SESSION,CSFILE))
+            with tarfile.open(os.path.join(BASEDIR,SESSION,CSFILE), CSARCHRMODE) as archive:
+                files = archive.getnames()
+                cs = read_var('chunksize', files, archive)
+                offset = read_var('offset', files, archive, default=(0,0))
+                chunks = {}
+                for file in files:
+                    chunk = pygame.image.fromstring(archive.extractfile(file).read(), (cs,cs), CSIMGFORMAT)
+                    coords = tuple(int(e) for e in file.split('.')[:2])
+                    chunks[coords] = chunk
+            return offset, (cs, chunks)
+        else:
+            return (0,0), (args.chunk_size, {})
+    except BaseException as e:
+        print('Error while trying to restore session: %s' % e)
+        return (0,0), (args.chunk_size, {})
     
 # Quit
 # ****
@@ -281,12 +296,25 @@ def pre_render():
     for pos, chunk in surface.retrieve_chunks(offset):
         result.append(str(pos))
         screen.blit(chunk, sub_tuples(offset,pos))
-    popup('Rendering chunks: ' + ', '.join(result))
     screen.blit(temp_surf,(0,0))
     
 def full_render():
     pre_render()
     flush()
+
+def render():
+    pre_render()
+    screen.blit(popup_surface, popup_pos)
+    screen.blit(tool_surface, tool_pos)
+    screen.blit(color_surface, color_pos)
+    if lock.lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
+        x1, y1 = anchor
+        x2, y2 = pygame.mouse.get_pos()
+        points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
+        pygame.draw.aalines(screen, grey, True, points, 4)
+    if lock.lock in {KEY_RESIZE} and isdown:
+        pygame.draw.circle(screen, grey, anchor, (penwidth)>>1)
+    pygame.display.flip()
     
 def save():
     global page
@@ -360,8 +388,9 @@ def fill(surface, pos1, pos2, color):
     pygame.draw.rect(surface, color, make_rect(pos1,pos2))
     popup('filled')
     return True
-def popup(message):
-    text = font.render(message, True, black)
+def popup(*args, sep=' '):
+    string = sep.join(str(e) for e in args)
+    text = font.render(string, True, black)
     popup_surface.fill(white)
     pygame.draw.rect(popup_surface, grey, pygame.Rect(0,0,popup_surface.get_width(),popup_surface.get_height()),3)
     popup_surface.blit(text, (2,2))
@@ -387,6 +416,11 @@ def flush():
 if not os.path.isdir(os.path.join(DIR,SESSION)):
     os.makedirs(os.path.join(DIR,SESSION))
 
+# Cursession dir
+# **************
+if not os.path.isdir(os.path.join(BASEDIR,SESSION)):
+    os.makedirs(os.path.join(BASEDIR,SESSION))
+    
 # Pygame
 # ******
 pygame.init()
@@ -402,7 +436,8 @@ icon = pygame.image.load(os.path.join(BASEDIR, 'blackbboard.png'))
 pygame.display.set_icon(icon)
 print('Icon made by Good Ware from flaticon.com')
 
-surface = Surface(*load_cursession())
+offset, surface = load_cursession()
+surface = Surface(*surface)
 
 popup_surface = pygame.Surface((screen.get_width(), fontsize))
 popup_surface.fill(white)
@@ -446,7 +481,6 @@ lock = Lock()
 #  - 'f' :  fill
 #  - None:  nothing
 # lock represents the actual state of the pen
-offset = (0,0)
 
 coff = 0
 maxcoff = 0
@@ -584,6 +618,11 @@ while True:
                     lock.lock =KEY_FILL
             elif event.key == ord(KEY_UNDO):
                 undo()
+            elif event.key == ord(KEY_SAVECS):
+                popup('saving current session...')
+                render()
+                save_cursession()
+                popup('saved current session!')
         elif event.type == KEYUP:
             if event.key == ord(KEY_RESIZE):
                 if lock.lock == KEY_RESIZE:
@@ -622,16 +661,5 @@ while True:
                     if anchor != (None,None):
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
-    pre_render()
-    screen.blit(popup_surface, popup_pos)
-    screen.blit(tool_surface, tool_pos)
-    screen.blit(color_surface, color_pos)
-    if lock.lock in {'m3', KEY_CUT, KEY_COPY, KEY_DELETE, KEY_FILL} and isdown:
-        x1, y1 = anchor
-        x2, y2 = pygame.mouse.get_pos()
-        points = ((x1,y1),(x2,y1),(x2,y2),(x1,y2))
-        pygame.draw.aalines(screen, grey, True, points, 4)
-    if lock.lock in {KEY_RESIZE} and isdown:
-        pygame.draw.circle(screen, grey, anchor, (penwidth)>>1)
-    pygame.display.flip()
+    render()
     clock.tick(FPS)
