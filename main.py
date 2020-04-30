@@ -44,6 +44,8 @@ parser.add_argument('--chunk-size', type=int, help='size of each chunk', default
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
 parser.add_argument('-F', '--fps', help='set maximum fps (higher values improve drawing at cost of more ressources)', default=60, type=int)
+parser.add_argument('--scale-x', help='set the scale factor corresponding to the number of pixel the screen horizontally moves per pixel the pen moves', type=int, default=1)
+parser.add_argument('--scale-y', help='set the scale factor corresponding to the number of pixel the screen vertically moves per pixel the pen moves', type=int, default=1)
 args = parser.parse_args()
 
 
@@ -67,6 +69,7 @@ SCREENSIZE = (args.width,args.height)
 PPP = args.ppp
 BASEDIR = os.path.dirname(os.path.abspath(__file__))
 MAXUNDO = 5
+MOVESCALE = (args.scale_x, args.scale_y)
 
 # Cursession
 # **********
@@ -273,6 +276,8 @@ def quit(exitcode=0):
 
 # Tuples
 # ******
+def mul_tuples(t1,t2):
+    return tuple(a*b for a,b in zip(t1,t2))
 def mul_tuple(r, t):
     return tuple(r*v for v in t)
     
@@ -582,7 +587,7 @@ while True:
                 draw_line(surface, last, anchor, pencolor, penwidth)
             elif lock.lock == 'm2' and isdown:
                 flush()
-                d = sub_tuples(pos, anchor)
+                d = mul_tuples(MOVESCALE, sub_tuples(pos, anchor))
                 offset = add_tuples(offset, d)
                 anchor = pos
             elif lock.lock == KEY_RESIZE and isdown:

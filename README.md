@@ -3,7 +3,7 @@
 Version 1.0, April 2020
 
 ```
-blackbboard [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--chunk-size CHUNK_SIZE] [-v] [-P PPP] [-F FPS]
+blackbboard [-h] [-p PENWIDTH] [-s SESSION] [--width WIDTH] [--height HEIGHT] .IP [-f {jpeg,bmp,tga,png}] [-d DIR] [--chunk-size CHUNK_SIZE] [-v] [-P PPP] [-F FPS] [--scale-x SCALE_X] [--scale-y SCALE_Y]
 ```
 
 
@@ -52,6 +52,10 @@ Your pages will be at _dir_/_session_-_page_._format_, where _page_ is an intege
   inverse speed of scale of penwidth
 * **-F** _FPS_, **--fps** _FPS_
   set maximum fps (higher values improve drawing at cost of more ressources)
+* **--scale-x** _SCALE\_X_
+  set the scale factor corresponding to the number of pixel the screen horizontally moves per pixel the pen moves
+* **--scale-y** _SCALE\_Y_
+  set the scale factor corresponding to the number of pixel the screen vertically moves per pixel the pen moves
 
 <a name="examples"></a>
 

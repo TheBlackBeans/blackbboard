@@ -7,6 +7,8 @@ BlackBBoard \- virtual boards
 \fBblackbboard\fR [\-h] [\-p \fIPENWIDTH\fR] [\-s \fISESSION\fR] [\-\-width \fIWIDTH\fR] [\-\-height \fIHEIGHT\fR]
 .IP
 [\-f {jpeg,bmp,tga,png}] [\-d \fIDIR\fR] [\-\-chunk-size \fICHUNK_SIZE\fR] [\-v] [\-P \fIPPP\fR] [\-F \fIFPS\fR]
+.IP
+[\-\-scale\-x \fISCALE_X\fR] [\-\-scale\-y \fISCALE_Y\fR]
 
 .SH DESCRIPTION
 \fBBlackBBoard\fR allows you to create virtual boards and to save them as pages within your current session.
@@ -52,6 +54,12 @@ inverse speed of scale of pen width
 .TP
 \fB\-F\fR \fIFPS\fR, \fB\-\-fps\fR \fIFPS\fR
 set maximum fps (higher values improve drawing at cost of more ressources)
+.TP
+\fB\-\-scale\-x \fISCALE_X\fR
+set the scale factor corresponding to the number of pixel the screen horizontally moves per pixel the pen moves
+.TP
+\fB\-\-scale\-y \fISCALE_Y\fR
+set the scale factor corresponding to the number of pixel the screen vertically moves per pixel the pen moves
 
 .SH EXAMPLES
 Most simple usage of this out-of-the-box utilitary
