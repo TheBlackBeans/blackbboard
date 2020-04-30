@@ -180,7 +180,7 @@ class Surface:
         last = {}
         for (x,y), chunk in self.retrieve_chunks(pos):
             rpos = sub_tuples((x,y),pos)
-            last[x,y] = chunk.copy()
+            last[x//self.chunksize,y//self.chunksize] = chunk.copy()
             chunk.blit(surface,rpos)
         self.lasts.append(last)
         if len(self.lasts) > MAXUNDO:
