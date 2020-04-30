@@ -278,6 +278,7 @@ def quit(exitcode=0):
 # ******
 def mul_tuples(t1,t2):
     return tuple(a*b for a,b in zip(t1,t2))
+
 def mul_tuple(r, t):
     return tuple(r*v for v in t)
     
@@ -594,6 +595,7 @@ while True:
                 coff = pos[0] - anchor[0]
                 coff = max(coff,maxcoff)
                 penwidth = max(anchw+coff//PPP,1)
+                chtool(tool_map[lock.lock] + (' %s' % penwidth))
         elif event.type == KEYDOWN:
             if event.key == ord(KEY_SAVE):
                 save()
@@ -603,6 +605,7 @@ while True:
                 if not islock:
                     islock = True
                     lock.lock = KEY_RESIZE
+                    chtool(tool_map[lock.lock] + (' %s' % penwidth))
             elif event.key == ord(KEY_CUT):
                 if not islock:
                     islock = True
