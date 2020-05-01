@@ -147,9 +147,10 @@ class Surface:
         else:
             self.chunks = chunks
         self.lasts = []
-    def get_chunk(self, pos):
+    def get_chunk(self, pos, write):
         if pos not in self.chunks:
-            self.create_chunk(pos)
+            if write: self.create_chunk(pos)
+            else: return False
         return self.chunks[pos]
     def undo(self):
         if len(self.lasts) == 0:
@@ -159,7 +160,7 @@ class Surface:
     def create_chunk(self, pos):
         self.chunks[pos] = pygame.Surface((self.chunksize,self.chunksize), SRCALPHA)
         self.chunks[pos].fill(transparent)
-    def retrieve_chunks(self,pos):
+    def retrieve_chunks(self,pos,write=False):
         # Yields chunks that you can possibly see in `surface'
         #  if surface.topleft == pos
         #     and chunksize >= surface.height
@@ -175,10 +176,12 @@ class Surface:
             ys.add(y//self.chunksize+1)
         for x in xs:
             for y in ys:
-                yield (x*self.chunksize,y*self.chunksize), self.get_chunk((x,y))
+                chunk = self.get_chunk((x,y),write)
+                if chunk:
+                    yield (x*self.chunksize,y*self.chunksize), chunk
     def blit(self, surface, pos):
         last = {}
-        for (x,y), chunk in self.retrieve_chunks(pos):
+        for (x,y), chunk in self.retrieve_chunks(pos,write=True):
             rpos = sub_tuples((x,y),pos)
             last[x//self.chunksize,y//self.chunksize] = chunk.copy()
             chunk.blit(surface,rpos)
@@ -669,5 +672,6 @@ while True:
                     if anchor != (None,None):
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
+    popup(len(surface.chunks))
     render()
     clock.tick(FPS)
