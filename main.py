@@ -6,7 +6,8 @@
 ### IMPORTS ###
 ###############
 
-import sys, os, argparse, datetime, math, functools, tarfile, io
+import sys, os, argparse, datetime, math, functools, tarfile, io, time
+from PIL import Image
 
 
 
@@ -38,9 +39,9 @@ parser.add_argument('-p', '--penwidth', help='width of the pen', default=4, type
 parser.add_argument('-s', '--session', help='session name', default='%Y-%m-%d-%H-%M-%S')
 parser.add_argument('--width', help='set the width of the window', type=int, default=1280)
 parser.add_argument('--height', help='set the height of the window', type=int, default=1024)
-parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'png', 'jpeg', 'bmp', 'tga'})
+parser.add_argument('-f', '--format', help='format of output files', default='png', choices={'string', 'png', 'jpeg', 'bmp', 'tga'})
 parser.add_argument('-d', '--dir', help='target directory to save session pages', default='blackbboard')
-parser.add_argument('--chunk-size', type=int, help='size of each chunk', default=2000)
+parser.add_argument('--chunk-size', type=int, help='size of each chunk', default=300)
 parser.add_argument('-v', '--version', action='version', version='%(prog)s '+__version__)
 parser.add_argument('-P', '--ppp', help='inverse speed of scale of pen width', default=20, type=int)
 parser.add_argument('-F', '--fps', help='set maximum fps (higher values improve drawing at cost of more ressources)', default=60, type=int)
@@ -159,8 +160,9 @@ class Surface:
         self.chunks.update(current)
     def create_chunk(self, pos):
         self.chunks[pos] = pygame.Surface((self.chunksize,self.chunksize), SRCALPHA)
+        self.chunks[pos].set_colorkey(white)
         self.chunks[pos].fill(transparent)
-    def retrieve_chunks(self,pos,write=False):
+    def retrieve_chunks(self, screensize, pos,write=False):
         # Yields chunks that you can possibly see in `surface'
         #  if surface.topleft == pos
         #     and chunksize >= surface.height
@@ -168,23 +170,24 @@ class Surface:
         # yields (pos,chunk) where pos == chunk.topleft
         # yields at most four chunks
         x,y=pos
-        xs = {x//self.chunksize}
-        ys = {y//self.chunksize}
-        if x%self.chunksize != 0:
-            xs.add(x//self.chunksize+1)
-        if y%self.chunksize != 0:
-            ys.add(y//self.chunksize+1)
-        for x in xs:
-            for y in ys:
-                chunk = self.get_chunk((x,y),write)
+        ox, oy = -x, -y
+        sx, sy = screensize
+        tx = ox//self.chunksize
+        ty = oy//self.chunksize
+        bx = (ox+sx)//self.chunksize
+        by = (oy+sy)//self.chunksize
+        for x in range(tx, bx+1):
+            for y in range(ty, by+1):
+                chunk = self.get_chunk((-x,-y), write)
                 if chunk:
-                    yield (x*self.chunksize,y*self.chunksize), chunk
+                    yield (-x*self.chunksize,-y*self.chunksize), chunk
     def blit(self, surface, pos):
         last = {}
-        for (x,y), chunk in self.retrieve_chunks(pos,write=True):
+        for (x,y), chunk in self.retrieve_chunks(surface.get_size(), pos,write=True):
+            lchunk = chunk.copy()
             rpos = sub_tuples((x,y),pos)
-            last[x//self.chunksize,y//self.chunksize] = chunk.copy()
             chunk.blit(surface,rpos)
+            last[x//self.chunksize,y//self.chunksize] = lchunk
         self.lasts.append(last)
         if len(self.lasts) > MAXUNDO:
             self.lasts.pop(0)
@@ -232,36 +235,60 @@ def add_file_archive(archive, name, string):
     tar_info.size = len(string)
     archive.addfile(tarinfo=tar_info, fileobj=s)
 
+def save_chunk(surface, format, size):
+    data = pygame.image.tostring(surface, CSIMGFORMAT)
+    if format == 'string':
+        return data
+    img = Image.frombytes(CSIMGFORMAT, (size,size), data)
+    zdata = io.BytesIO()
+    img.save(zdata, format)
+    return zdata.getvalue()
+    
 def save_cursession():
     flush()
     cs, chunks = surface.save()
+    format = FORMAT
     with tarfile.open(os.path.join(BASEDIR, SESSION, CSFILE), CSARCHWMODE) as archive:
         add_file_archive(archive, 'chunksize', bytes(str(cs), 'utf-8'))
         add_file_archive(archive, 'offset', bytes(str(offset), 'utf-8'))
+        add_file_archive(archive, 'format', bytes(format, 'utf-8'))
         for (x,y), chunk in chunks.items():
-            add_file_archive(archive, CSCHUNKMASK.format(x=x,y=y), pygame.image.tostring(chunk, CSIMGFORMAT))
+            add_file_archive(archive, CSCHUNKMASK.format(x=x,y=y), save_chunk(chunk, format, cs))
     popup('saved current session')
 
-def read_var(var, files, archive, default=None):
+def read_var(var, files, archive, default=None,type=eval):
     if var not in files and default!=None:
         return default
     elif var not in files:
         raise FileNotFoundError("Couldn't find the variable file %s" % var)
     files.remove(var)
-    return eval(archive.extractfile(var).read())
+    return type(archive.extractfile(var).read())
+
+def load_chunk(string, size, format):
+    if format == 'string':
+        r = pygame.image.fromstring(string, (size,size), CSIMGFORMAT)
+    else:
+        zdata = io.BytesIO(string)
+        img = Image.open(zdata)
+        r = pygame.image.fromstring(img.tobytes(), (size,size), CSIMGFORMAT)
+    r.set_colorkey(white)
+    return r
+    
     
 def load_cursession():
     try:
         if os.path.isfile(os.path.join(BASEDIR, SESSION, CSFILE)) and tarfile.is_tarfile(os.path.join(BASEDIR, SESSION, CSFILE)):
-            print(os.path.join(BASEDIR,SESSION,CSFILE))
+            #print(os.path.join(BASEDIR,SESSION,CSFILE))
             with tarfile.open(os.path.join(BASEDIR,SESSION,CSFILE), CSARCHRMODE) as archive:
                 files = archive.getnames()
                 cs = read_var('chunksize', files, archive)
                 offset = read_var('offset', files, archive, default=(0,0))
+                format = read_var('format', files, archive, default='string',type=lambda x: x.decode('utf-8'))
                 chunks = {}
                 for file in files:
-                    chunk = pygame.image.fromstring(archive.extractfile(file).read(), (cs,cs), CSIMGFORMAT)
                     coords = tuple(int(e) for e in file.split('.')[:2])
+                    string = archive.extractfile(file).read()
+                    chunk = load_chunk(string, cs, format)
                     chunks[coords] = chunk
             return offset, (cs, chunks)
         else:
@@ -300,11 +327,14 @@ def relpos(pos):
 # Save to page
 # ************
 def pre_render():
+    global rendered_pos
+    rendered_pos = []
     screen.fill(white)
     result = []
-    for pos, chunk in surface.retrieve_chunks(offset):
+    for pos, chunk in surface.retrieve_chunks(screen.get_size(), offset):
         result.append(str(pos))
         screen.blit(chunk, sub_tuples(offset,pos))
+    rendered_pos.extend(result)
     screen.blit(temp_surf,(0,0))
     
 def full_render():
@@ -516,6 +546,8 @@ popup('Current session: %s' % SESSION)
 
 clock = pygame.time.Clock()
 
+rendered_pos = []
+
 while True:
     for event in pygame.event.get():
         pos = pygame.mouse.get_pos()
@@ -672,6 +704,5 @@ while True:
                     if anchor != (None,None):
                         fill(surface, anchor, pos, pencolor)
                         anchor = (None,None)
-    popup(len(surface.chunks))
     render()
     clock.tick(FPS)
